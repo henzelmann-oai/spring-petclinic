@@ -19,6 +19,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: Check wrapper checksums
+        run: bash .github/scripts/check-wrapper-checksums.sh
       - name: Set up JDK ${{matrix.java}}
         uses: actions/setup-java@v4
         with:
