@@ -35,6 +35,12 @@ With Gradle, the command is as follows:
 
 You can then access the Petclinic at <http://localhost:8080/>.
 
+### Updating build wrappers
+
+When updating Maven or Gradle wrapper distributions, commit the updated wrapper files together with the SHA-256 checksum for the configured distribution URL. The checksum belongs in `distributionSha256Sum` in `.mvn/wrapper/maven-wrapper.properties` and `gradle/wrapper/gradle-wrapper.properties`.
+
+Use the checksum published by the upstream project when available. If only a stronger checksum is published for a Maven distribution, download the exact `distributionUrl`, verify it against the published checksum, then record the SHA-256 of the verified file. Run `bash .github/scripts/check-wrapper-checksums.sh`, `./mvnw -v`, and `./gradlew -v` after wrapper changes.
+
 <img width="1042" alt="petclinic-screenshot" src="https://cloud.githubusercontent.com/assets/838318/19727082/2aee6d6c-9b8e-11e6-81fe-e889a5ddfded.png">
 
 You can, of course, run Petclinic in your favorite IDE.
