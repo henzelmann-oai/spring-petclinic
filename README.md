@@ -103,7 +103,7 @@ At development time we recommend you use the test applications set up as `main()
 
 ## Compiling the CSS
 
-There is a `petclinic.css` in `src/main/resources/static/resources/css`. It was generated from the `petclinic.scss` source, combined with the [Bootstrap](https://getbootstrap.com/) library. If you make changes to the `scss`, or upgrade Bootstrap, you will need to re-compile the CSS resources using the Maven profile "css", i.e. `./mvnw package -P css`. There is no build profile for Gradle to compile the CSS.
+There is a `petclinic.css` in `src/main/resources/static/resources/css`. It is generated from the `petclinic.scss` source, combined with the [Bootstrap](https://getbootstrap.com/) library through the maintained Dart Sass npm package. If you make changes to the `scss`, or upgrade Bootstrap, re-compile the CSS resources with Maven using `./mvnw generate-resources -P css`, with Gradle using `./gradlew compileCss`, or directly with `npm ci && npm run build:css`.
 
 ## Working with Petclinic in your IDE
 
@@ -112,6 +112,7 @@ There is a `petclinic.css` in `src/main/resources/static/resources/css`. It was 
 The following items should be installed in your system:
 
 - Java 17 (full JDK, not a JRE)
+- Node.js and npm, required only when regenerating checked-in CSS
 - [Git command line tool](https://help.github.com/articles/set-up-git)
 - Your preferred IDE
   - Eclipse with the m2e plugin. Note: when m2e is available, there is a m2 icon in `Help -> About` dialog. If m2e is

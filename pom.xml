@@ -29,8 +29,8 @@
 
     <!-- Checkstyle needs to stay on v12 since v13 sets minimal jdk to 21 - https://checkstyle.org/releasenotes.html#Release_13.0.0 -->
     <checkstyle.version>12.3.1</checkstyle.version>
+    <exec-maven-plugin.version>3.5.0</exec-maven-plugin.version>
     <jacoco.version>0.8.14</jacoco.version>
-    <libsass.version>0.3.4</libsass.version>
     <lifecycle-mapping>1.0.0</lifecycle-mapping>
     <maven-checkstyle.version>3.6.0</maven-checkstyle.version>
     <nohttp-checkstyle.version>0.0.11</nohttp-checkstyle.version>
@@ -305,45 +305,36 @@
       <build>
         <plugins>
           <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-dependency-plugin</artifactId>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>${exec-maven-plugin.version}</version>
             <executions>
               <execution>
-                <id>unpack</id>
-                <goals>
-                  <goal>unpack</goal>
-                </goals>
-                <?m2e execute onConfiguration,onIncremental?>
+                <id>npm-ci</id>
                 <phase>generate-resources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
                 <configuration>
-                  <artifactItems>
-                    <artifactItem>
-                      <groupId>org.webjars.npm</groupId>
-                      <artifactId>bootstrap</artifactId>
-                      <version>${webjars-bootstrap.version}</version>
-                    </artifactItem>
-                  </artifactItems>
-                  <outputDirectory>${project.build.directory}/webjars</outputDirectory>
+                  <executable>npm</executable>
+                  <arguments>
+                    <argument>ci</argument>
+                  </arguments>
                 </configuration>
               </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>com.gitlab.haynes</groupId>
-            <artifactId>libsass-maven-plugin</artifactId>
-            <version>${libsass.version}</version>
-            <configuration>
-              <inputPath>${basedir}/src/main/scss/</inputPath>
-              <outputPath>${basedir}/src/main/resources/static/resources/css/</outputPath>
-              <includePath>${project.build.directory}/webjars/META-INF/resources/webjars/bootstrap/${webjars-bootstrap.version}/scss/</includePath>
-            </configuration>
-            <executions>
               <execution>
-                <?m2e execute onConfiguration,onIncremental?>
-                <goals>
-                  <goal>compile</goal>
-                </goals>
+                <id>compile-css</id>
                 <phase>generate-resources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>npm</executable>
+                  <arguments>
+                    <argument>run</argument>
+                    <argument>build:css</argument>
+                  </arguments>
+                </configuration>
               </execution>
             </executions>
           </plugin>

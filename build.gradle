@@ -32,6 +32,7 @@ ext.webjarsLocatorLiteVersion = "1.1.3"
 ext.webjarsFontawesomeVersion = "4.7.0"
 ext.webjarsBootstrapVersion = "5.3.8"
 ext.jacocoVersion = "0.8.14"
+def npmCommand = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows") ? "npm.cmd" : "npm"
 
 dependencies {
   implementation 'org.springframework.boot:spring-boot-starter-cache'
@@ -102,6 +103,20 @@ tasks.named("cyclonedxDirectBom").configure {
 
 tasks.named("check") {
   dependsOn("cyclonedxDirectBom", "jacocoTestReport")
+}
+
+tasks.register("npmInstall", Exec) {
+  inputs.files("package.json", "package-lock.json")
+  outputs.dir("node_modules")
+  commandLine npmCommand, "ci"
+}
+
+tasks.register("compileCss", Exec) {
+  dependsOn("npmInstall")
+  inputs.files(fileTree("src/main/scss"))
+  inputs.files(fileTree("node_modules/bootstrap/scss"))
+  outputs.file("src/main/resources/static/resources/css/petclinic.css")
+  commandLine npmCommand, "run", "build:css"
 }
 
 checkstyle {

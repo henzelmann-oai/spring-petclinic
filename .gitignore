@@ -44,5 +44,6 @@ out/
 
 ### CSS ###
 _site/
+node_modules/
 *.css
 !petclinic.css
