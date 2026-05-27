@@ -28,10 +28,27 @@ spec:
       labels:
         app: petclinic
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: workload
           image: spring-petclinic:ci-placeholder
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: postgres
@@ -57,9 +74,13 @@ spec:
             - mountPath: /bindings/secret
               name: binding
               readOnly: true
+            - mountPath: /tmp
+              name: tmp
       volumes:
         - name: binding
           projected:
             sources:
               - secret:
                   name: demo-db
+        - name: tmp
+          emptyDir: {}
