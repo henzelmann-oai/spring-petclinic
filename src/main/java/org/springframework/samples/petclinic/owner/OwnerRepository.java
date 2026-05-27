@@ -15,10 +15,13 @@
  */
 package org.springframework.samples.petclinic.owner;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
@@ -43,6 +46,23 @@ public interface OwnerRepository extends JpaRepository<Owner, Integer> {
 	 * found)
 	 */
 	Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable);
+
+	/**
+	 * Retrieve owners with their pets loaded for rendering the owners list while leaving
+	 * nested visits lazy.
+	 * @param ids the owner identifiers to load
+	 * @return matching owners with pets initialized
+	 */
+	@EntityGraph(attributePaths = "pets")
+	List<Owner> findByIdIn(Collection<Integer> ids);
+
+	/**
+	 * Retrieve an {@link Owner} with pets loaded for detail and form flows.
+	 * @param id the id to search for
+	 * @return an {@link Optional} containing the owner with pets initialized
+	 */
+	@EntityGraph(attributePaths = { "pets", "pets.type" })
+	Optional<Owner> findWithPetsById(Integer id);
 
 	/**
 	 * Retrieve an {@link Owner} from the data store by id.

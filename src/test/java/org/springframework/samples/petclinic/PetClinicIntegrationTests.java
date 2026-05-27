@@ -60,8 +60,9 @@ public class PetClinicIntegrationTests {
 	@Test
 	void ownerDetails() {
 		RestTemplate template = builder.rootUri("http://localhost:" + port).build();
-		ResponseEntity<String> result = template.exchange(RequestEntity.get("/owners/1").build(), String.class);
+		ResponseEntity<String> result = template.exchange(RequestEntity.get("/owners/6").build(), String.class);
 		assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(result.getBody()).contains("Samantha", "Max", "rabies shot", "neutered", "spayed");
 	}
 
 	@Test
@@ -69,6 +70,7 @@ public class PetClinicIntegrationTests {
 		RestTemplate template = builder.rootUri("http://localhost:" + port).build();
 		ResponseEntity<String> result = template.exchange(RequestEntity.get("/owners?lastName=").build(), String.class);
 		assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(result.getBody()).contains("George Franklin", "Leo").doesNotContain("rabies shot");
 	}
 
 	@Test

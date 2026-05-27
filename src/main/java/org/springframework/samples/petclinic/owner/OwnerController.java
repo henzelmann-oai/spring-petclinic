@@ -16,13 +16,17 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
@@ -119,7 +123,7 @@ class OwnerController {
 	}
 
 	private String addPaginationModel(int page, Model model, Page<Owner> paginated) {
-		List<Owner> listOwners = paginated.getContent();
+		List<Owner> listOwners = findOwnersWithPets(paginated.getContent());
 		model.addAttribute("currentPage", page);
 		model.addAttribute("totalPages", paginated.getTotalPages());
 		model.addAttribute("totalItems", paginated.getTotalElements());
@@ -131,6 +135,17 @@ class OwnerController {
 		int pageSize = 5;
 		Pageable pageable = PageRequest.of(page - 1, pageSize);
 		return owners.findByLastNameStartingWith(lastname, pageable);
+	}
+
+	private List<Owner> findOwnersWithPets(List<Owner> ownerList) {
+		List<Integer> ownerIds = ownerList.stream().map(Owner::getId).toList();
+		if (ownerIds.isEmpty()) {
+			return ownerList;
+		}
+		Map<Integer, Owner> ownersWithPets = owners.findByIdIn(ownerIds)
+			.stream()
+			.collect(Collectors.toMap(Owner::getId, Function.identity()));
+		return ownerIds.stream().map(ownersWithPets::get).toList();
 	}
 
 	@GetMapping("/owners/{ownerId}/edit")
@@ -164,11 +179,13 @@ class OwnerController {
 	 * @return a ModelMap with the model attributes for the view
 	 */
 	@GetMapping("/owners/{ownerId}")
+	@Transactional(readOnly = true)
 	public ModelAndView showOwner(@PathVariable("ownerId") int ownerId) {
 		ModelAndView mav = new ModelAndView("owners/ownerDetails");
-		Optional<Owner> optionalOwner = this.owners.findById(ownerId);
+		Optional<Owner> optionalOwner = this.owners.findWithPetsById(ownerId);
 		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
 				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
+		owner.getPets().forEach(pet -> pet.getVisits().size());
 		mav.addObject(owner);
 		return mav;
 	}
