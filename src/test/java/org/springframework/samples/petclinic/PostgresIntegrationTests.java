@@ -24,6 +24,8 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.sql.DataSource;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.jupiter.api.BeforeAll;
@@ -40,6 +42,9 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.PropertySource;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
@@ -59,6 +64,9 @@ public class PostgresIntegrationTests {
 
 	@Autowired
 	private VetRepository vets;
+
+	@Autowired
+	private DataSource dataSource;
 
 	@Autowired
 	private RestTemplateBuilder builder;
@@ -89,6 +97,46 @@ public class PostgresIntegrationTests {
 		RestTemplate template = builder.rootUri("http://localhost:" + port).build();
 		ResponseEntity<String> result = template.exchange(RequestEntity.get("/owners/1").build(), String.class);
 		assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+	}
+
+	@Test
+	void postgresSchemaAndDataCanInitializeTwice() {
+		ResourceDatabasePopulator populator = new ResourceDatabasePopulator(
+				new ClassPathResource("db/postgres/schema.sql"), new ClassPathResource("db/postgres/data.sql"));
+
+		populator.execute(dataSource);
+		populator.execute(dataSource);
+
+		JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM owners", Integer.class)).isEqualTo(10);
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM pets", Integer.class)).isEqualTo(13);
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM visits", Integer.class)).isEqualTo(4);
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM vets", Integer.class)).isEqualTo(6);
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM vet_specialties", Integer.class)).isEqualTo(5);
+		assertThat(jdbc.queryForObject("""
+				SELECT o.first_name || ' ' || o.last_name
+				FROM owners o
+				JOIN pets p ON p.owner_id = o.id
+				WHERE p.id = 7
+				""", String.class)).isEqualTo("Jean Coleman");
+		assertThat(jdbc.queryForObject("""
+				SELECT t.name
+				FROM types t
+				JOIN pets p ON p.type_id = t.id
+				WHERE p.id = 8
+				""", String.class)).isEqualTo("cat");
+		assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM visits WHERE pet_id = 8", Integer.class)).isEqualTo(2);
+		assertThat(jdbc.queryForList("""
+				SELECT s.name
+				FROM specialties s
+				JOIN vet_specialties vs ON vs.specialty_id = s.id
+				WHERE vs.vet_id = 3
+				ORDER BY s.name
+				""", String.class)).containsExactly("dentistry", "surgery");
+		assertThat(jdbc.queryForObject("SELECT nextval(pg_get_serial_sequence('owners', 'id'))", Integer.class))
+			.isGreaterThan(10);
+		assertThat(jdbc.queryForObject("SELECT nextval(pg_get_serial_sequence('visits', 'id'))", Integer.class))
+			.isGreaterThan(4);
 	}
 
 	static class PropertiesLogger implements ApplicationListener<ApplicationPreparedEvent> {
