@@ -26,10 +26,34 @@ spec:
     metadata:
       labels:
         app: demo-db
+      annotations:
+        petclinic.spring.io/run-as-non-root-exception: "postgres entrypoint needs root to initialize the mounted data directory"
+        petclinic.spring.io/read-only-root-filesystem-exception: "postgres entrypoint writes runtime files outside the data volume"
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - image: postgres:18.3
           name: postgresql
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - DAC_OVERRIDE
+                - FOWNER
+                - SETGID
+                - SETUID
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           env:
             - name: POSTGRES_USER
               valueFrom:
@@ -58,3 +82,13 @@ spec:
           startupProbe:
             tcpSocket:
               port: postgresql
+          volumeMounts:
+            - mountPath: /var/lib/postgresql
+              name: postgres-data
+            - mountPath: /tmp
+              name: tmp
+      volumes:
+        - name: postgres-data
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
