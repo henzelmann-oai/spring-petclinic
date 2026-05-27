@@ -17,6 +17,7 @@
 package org.springframework.samples.petclinic;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -43,6 +44,7 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.http.HttpStatus;
@@ -137,6 +139,24 @@ public class PostgresIntegrationTests {
 			.isGreaterThan(10);
 		assertThat(jdbc.queryForObject("SELECT nextval(pg_get_serial_sequence('visits', 'id'))", Integer.class))
 			.isGreaterThan(4);
+	}
+
+	@Test
+	void postgresRejectsPetsWithoutOwner() {
+		JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+		assertThatThrownBy(() -> jdbc
+			.update("INSERT INTO pets (name, birth_date, type_id, owner_id) VALUES ('Orphan', '2020-01-01', 1, NULL)"))
+			.isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	@Test
+	void postgresRejectsVisitsWithoutPet() {
+		JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+		assertThatThrownBy(() -> jdbc
+			.update("INSERT INTO visits (pet_id, visit_date, description) VALUES (NULL, '2020-01-01', 'checkup')"))
+			.isInstanceOf(DataIntegrityViolationException.class);
 	}
 
 	static class PropertiesLogger implements ApplicationListener<ApplicationPreparedEvent> {

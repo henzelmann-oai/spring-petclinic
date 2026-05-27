@@ -17,6 +17,9 @@
 package org.springframework.samples.petclinic;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
@@ -26,9 +29,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.samples.petclinic.vet.VetRepository;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.aot.DisabledInAotMode;
@@ -58,6 +63,9 @@ class MySqlIntegrationTests {
 	@Autowired
 	private RestTemplateBuilder builder;
 
+	@Autowired
+	private DataSource dataSource;
+
 	@Test
 	void findAll() {
 		vets.findAll();
@@ -69,6 +77,24 @@ class MySqlIntegrationTests {
 		RestTemplate template = builder.rootUri("http://localhost:" + port).build();
 		ResponseEntity<String> result = template.exchange(RequestEntity.get("/owners/1").build(), String.class);
 		assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+	}
+
+	@Test
+	void mysqlRejectsPetsWithoutOwner() {
+		JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+		assertThatThrownBy(() -> jdbc
+			.update("INSERT INTO pets (name, birth_date, type_id, owner_id) VALUES ('Orphan', '2020-01-01', 1, NULL)"))
+			.isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	@Test
+	void mysqlRejectsVisitsWithoutPet() {
+		JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+
+		assertThatThrownBy(() -> jdbc
+			.update("INSERT INTO visits (pet_id, visit_date, description) VALUES (NULL, '2020-01-01', 'checkup')"))
+			.isInstanceOf(DataIntegrityViolationException.class);
 	}
 
 }
