@@ -4,21 +4,81 @@ on:
   push:
     branches: [main]
     paths:
+      - '.github/workflows/deploy-and-test-cluster.yml'
       - 'k8s/**'
+      - '.mvn/**'
+      - 'mvnw'
+      - 'pom.xml'
+      - 'src/**'
   pull_request:
     branches: [main]
     paths:
+      - '.github/workflows/deploy-and-test-cluster.yml'
       - 'k8s/**'
+      - '.mvn/**'
+      - 'mvnw'
+      - 'pom.xml'
+      - 'src/**'
 
 jobs:
   deploy-and-test-cluster:
     runs-on: ubuntu-latest
+    env:
+      APP_IMAGE_REPOSITORY: spring-petclinic
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Define commit image tag
+        run: echo "APP_IMAGE=${APP_IMAGE_REPOSITORY}:${GITHUB_SHA}" >> "$GITHUB_ENV"
+
+      - name: Validate Kubernetes manifests
+        run: |
+          ruby <<'RUBY'
+          require 'yaml'
+
+          failures = []
+          Dir['k8s/*.yml'].sort.each do |path|
+            YAML.load_stream(File.read(path)).compact.each do |document|
+              Array(document.dig('spec', 'template', 'spec', 'containers')).each do |container|
+                image = container['image'].to_s
+                image_name = image.split('/').last
+                has_digest = image.include?('@sha256:')
+                has_tag = image_name.include?(':')
+                failures << "#{path}: #{container['name']} uses #{image.inspect}" unless has_digest || has_tag
+              end
+            end
+          end
+
+          unless failures.empty?
+            warn "Kubernetes container images must use an explicit tag or sha256 digest:"
+            failures.each { |failure| warn "  - #{failure}" }
+            exit 1
+          end
+          RUBY
+
+      - name: Build application image from this commit
+        run: |
+          mkdir -p target
+          ./mvnw -B -DskipTests spring-boot:build-image -Dspring-boot.build-image.imageName="${APP_IMAGE}"
 
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1
+        with:
+          cluster_name: petclinic
+
+      - name: Server dry-run Kubernetes manifests
+        run: kubectl apply --dry-run=server -f k8s/
+
+      - name: Load application image into Kind
+        run: kind load docker-image "${APP_IMAGE}" --name petclinic
 
       - name: Create local demo database Secret
         run: |
@@ -34,9 +94,25 @@ jobs:
 
       - name: Deploy application
         run: |
-          kubectl apply -f k8s/
+          mkdir -p "${RUNNER_TEMP}/k8s"
+          cp k8s/*.yml "${RUNNER_TEMP}/k8s/"
+          cat > "${RUNNER_TEMP}/k8s/kustomization.yml" <<EOF
+          resources:
+            - db.yml
+            - petclinic.yml
+          images:
+            - name: spring-petclinic
+              newName: ${APP_IMAGE_REPOSITORY}
+              newTag: ${GITHUB_SHA}
+          EOF
+          kubectl apply -k "${RUNNER_TEMP}/k8s"
 
       - name: Wait for Pods to be ready
         run: |
           kubectl wait --for=condition=ready pod -l app=demo-db --timeout=180s
           kubectl wait --for=condition=ready pod -l app=petclinic --timeout=180s
+
+      - name: Assert deployed application image
+        run: |
+          deployed_image="$(kubectl get pod -l app=petclinic -o jsonpath='{.items[0].spec.containers[?(@.name=="workload")].image}')"
+          test "${deployed_image}" = "${APP_IMAGE}"
