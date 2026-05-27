@@ -23,6 +23,7 @@ import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.aot.DisabledInAotMode;
@@ -87,6 +88,19 @@ class VetControllerTests {
 			.andExpect(model().attributeExists("listVets"))
 			.andExpect(view().name("vets/vetList"));
 
+	}
+
+	@Test
+	void showVetListHtmlDefaultsInvalidPageValuesToFirstPage() throws Exception {
+		given(this.vets.findAll(any(Pageable.class)))
+			.willReturn(new PageImpl<Vet>(Lists.newArrayList(james(), helen()), PageRequest.of(0, 5), 6));
+
+		for (String page : Lists.newArrayList("0", "-1", "not-a-number")) {
+			mockMvc.perform(MockMvcRequestBuilders.get("/vets.html").param("page", page))
+				.andExpect(status().isOk())
+				.andExpect(model().attribute("currentPage", 1))
+				.andExpect(view().name("vets/vetList"));
+		}
 	}
 
 	@Test

@@ -42,13 +42,14 @@ class VetController {
 	}
 
 	@GetMapping("/vets.html")
-	public String showVetList(@RequestParam(defaultValue = "1") int page, Model model) {
+	public String showVetList(@RequestParam(defaultValue = "1") String page, Model model) {
+		int pageNumber = parsePageNumber(page);
 		// Here we are returning an object of type 'Vets' rather than a collection of Vet
 		// objects so it is simpler for Object-Xml mapping
 		Vets vets = new Vets();
-		Page<Vet> paginated = findPaginated(page);
+		Page<Vet> paginated = findPaginated(pageNumber);
 		vets.getVetList().addAll(paginated.toList());
-		return addPaginationModel(page, paginated, model);
+		return addPaginationModel(pageNumber, paginated, model);
 	}
 
 	private String addPaginationModel(int page, Page<Vet> paginated, Model model) {
@@ -64,6 +65,15 @@ class VetController {
 		int pageSize = 5;
 		Pageable pageable = PageRequest.of(page - 1, pageSize);
 		return vetRepository.findAll(pageable);
+	}
+
+	private int parsePageNumber(String page) {
+		try {
+			return Math.max(Integer.parseInt(page), 1);
+		}
+		catch (NumberFormatException ex) {
+			return 1;
+		}
 	}
 
 	@GetMapping({ "/vets" })
