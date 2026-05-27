@@ -179,6 +179,11 @@ class PetControllerTests {
 			.andExpect(view().name("redirect:/owners/{ownerId}"));
 	}
 
+	@Test
+	void initUpdateFormNotFoundForUnknownPet() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, 99)).andExpect(status().isNotFound());
+	}
+
 	@Nested
 	class ProcessUpdateFormHasErrors {
 

@@ -47,8 +47,7 @@ import org.springframework.http.ResponseEntity;
  * @author Alex Lutz
  */
 // NOT Waiting https://github.com/spring-projects/spring-boot/issues/5574
-@SpringBootTest(webEnvironment = RANDOM_PORT,
-		properties = { "spring.web.error.include-message=ALWAYS", "management.endpoints.access.default=none" })
+@SpringBootTest(webEnvironment = RANDOM_PORT, properties = { "management.endpoints.access.default=none" })
 @AutoConfigureTestRestTemplate
 class CrashControllerIntegrationTests {
 
@@ -69,7 +68,7 @@ class CrashControllerIntegrationTests {
 		assertThat(resp.getBody()).containsKey("timestamp");
 		assertThat(resp.getBody()).containsKey("status");
 		assertThat(resp.getBody()).containsKey("error");
-		assertThat(resp.getBody()).containsEntry("message",
+		assertThat(resp.getBody()).doesNotContainEntry("message",
 				"Expected: controller used to showcase what happens when an exception is thrown");
 		assertThat(resp.getBody()).containsEntry("path", "/oups");
 	}
@@ -85,8 +84,9 @@ class CrashControllerIntegrationTests {
 		assertThat(resp.getBody()).isNotNull();
 		// html:
 		assertThat(resp.getBody()).containsSubsequence("<body>", "<h2>", "Something happened...", "</h2>", "<p>",
-				"Expected:", "controller", "used", "to", "showcase", "what", "happens", "when", "an", "exception", "is",
-				"thrown", "</p>", "</body>");
+				"An internal server error occurred.", "</p>", "</body>");
+		assertThat(resp.getBody())
+			.doesNotContain("Expected: controller used to showcase what happens when an exception is thrown");
 		// Not the whitelabel error page:
 		assertThat(resp.getBody()).doesNotContain("Whitelabel Error Page",
 				"This application has no explicit mapping for");

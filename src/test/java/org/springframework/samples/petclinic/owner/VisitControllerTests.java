@@ -72,6 +72,18 @@ class VisitControllerTests {
 	}
 
 	@Test
+	void initNewVisitFormNotFoundForUnknownOwner() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", 99, TEST_PET_ID))
+			.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void initNewVisitFormNotFoundForUnknownPet() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, 99))
+			.andExpect(status().isNotFound());
+	}
+
+	@Test
 	void processNewVisitFormSuccess() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)

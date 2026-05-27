@@ -13,9 +13,6 @@
     <span th:case="500" th:text="#{error.500}">An internal server error occurred.</span>
     <span th:case="*" th:text="#{error.general}">An unexpected error occurred.</span>
   </p>
-
-  <!-- Exception message (for developers) -->
-  <p th:text="${message}">Exception message</p>
 </body>
 
 </html>
