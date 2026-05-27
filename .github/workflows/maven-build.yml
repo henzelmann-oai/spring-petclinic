@@ -29,3 +29,5 @@ jobs:
           cache: maven
       - name: Build with Maven Wrapper
         run: ./mvnw -B verify
+      - name: Check Maven build artifacts
+        run: bash .github/scripts/check-build-artifacts.sh maven
