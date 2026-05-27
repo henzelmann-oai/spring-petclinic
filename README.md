@@ -67,14 +67,26 @@ A similar setup is provided for MySQL and PostgreSQL if a persistent database co
 You can start MySQL or PostgreSQL locally with whatever installer works for your OS or use docker:
 
 ```bash
-docker run -e MYSQL_USER=petclinic -e MYSQL_PASSWORD=petclinic -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=petclinic -p 3306:3306 mysql:9.6
+export MYSQL_URL=jdbc:mysql://localhost/petclinic
+export MYSQL_USER=<local-user>
+export MYSQL_PASSWORD=<local-password>
+docker run -e MYSQL_USER="$MYSQL_USER" -e MYSQL_PASSWORD="$MYSQL_PASSWORD" -e MYSQL_ROOT_PASSWORD=<local-root-password> -e MYSQL_DATABASE=petclinic -p 3306:3306 mysql:9.6
+./mvnw spring-boot:run -Dspring-boot.run.profiles=mysql
 ```
 
 or
 
 ```bash
-docker run -e POSTGRES_USER=petclinic -e POSTGRES_PASSWORD=petclinic -e POSTGRES_DB=petclinic -p 5432:5432 postgres:18.3
+export POSTGRES_URL=jdbc:postgresql://localhost/petclinic
+export POSTGRES_USER=<local-user>
+export POSTGRES_PASSWORD=<local-password>
+docker run -e POSTGRES_USER="$POSTGRES_USER" -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" -e POSTGRES_DB=petclinic -p 5432:5432 postgres:18.3
+./mvnw spring-boot:run -Dspring-boot.run.profiles=postgres
 ```
+
+The `mysql` and `postgres` Spring profiles require these environment variables to
+be set explicitly. They intentionally do not provide checked-in password
+defaults.
 
 Further documentation is provided for [MySQL](https://github.com/spring-projects/spring-petclinic/blob/main/src/main/resources/db/mysql/petclinic_db_setup_mysql.txt)
 and [PostgreSQL](https://github.com/spring-projects/spring-petclinic/blob/main/src/main/resources/db/postgres/petclinic_db_setup_postgres.txt).
@@ -89,6 +101,29 @@ or
 
 ```bash
 docker compose up postgres
+```
+
+Before using Docker Compose, create a local `.env` file from `.env.example` and
+replace the sample values with credentials for your machine. `.env` files are
+ignored by Git so local database credentials are not committed. When starting
+the application against a Compose database, also set the matching `MYSQL_*` or
+`POSTGRES_*` application environment variables in your shell.
+
+For the Kubernetes demo manifests, create the database Secret locally before
+applying `k8s/`:
+
+```bash
+kubectl create secret generic demo-db \
+  --type=servicebinding.io/postgresql \
+  --from-literal=type=postgresql \
+  --from-literal=provider=postgresql \
+  --from-literal=host=demo-db \
+  --from-literal=port=5432 \
+  --from-literal=database=petclinic \
+  --from-literal=username=<local-user> \
+  --from-literal=password=<local-password>
+
+kubectl apply -f k8s/
 ```
 
 ## Test Applications

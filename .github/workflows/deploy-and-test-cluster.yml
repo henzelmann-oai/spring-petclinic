@@ -20,6 +20,18 @@ jobs:
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1
 
+      - name: Create local demo database Secret
+        run: |
+          kubectl create secret generic demo-db \
+            --type=servicebinding.io/postgresql \
+            --from-literal=type=postgresql \
+            --from-literal=provider=postgresql \
+            --from-literal=host=demo-db \
+            --from-literal=port=5432 \
+            --from-literal=database=petclinic \
+            --from-literal=username=ci-demo-user \
+            --from-literal=password="$(openssl rand -base64 24)"
+
       - name: Deploy application
         run: |
           kubectl apply -f k8s/
@@ -28,4 +40,3 @@ jobs:
         run: |
           kubectl wait --for=condition=ready pod -l app=demo-db --timeout=180s
           kubectl wait --for=condition=ready pod -l app=petclinic --timeout=180s
-
