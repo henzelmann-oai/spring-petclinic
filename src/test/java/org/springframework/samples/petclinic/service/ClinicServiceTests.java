@@ -20,8 +20,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
+import org.hibernate.Hibernate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -91,6 +93,40 @@ class ClinicServiceTests {
 
 		owners = this.owners.findByLastNameStartingWith("Daviss", pageable);
 		assertThat(owners).isEmpty();
+	}
+
+	@Test
+	void ownerSearchLeavesPetsAndVisitsLazy() {
+		Page<Owner> ownerPage = this.owners.findByLastNameStartingWith("", Pageable.ofSize(5));
+
+		assertThat(ownerPage).hasSize(5);
+		assertThat(ownerPage).allSatisfy(owner -> assertThat(Hibernate.isInitialized(owner.getPets())).isFalse());
+	}
+
+	@Test
+	void ownerListLoaderInitializesPetsButLeavesVisitsLazy() {
+		Page<Owner> ownerPage = this.owners.findByLastNameStartingWith("", Pageable.ofSize(5));
+		List<Integer> ownerIds = ownerPage.stream().map(Owner::getId).toList();
+
+		List<Owner> owners = this.owners.findByIdIn(ownerIds);
+
+		assertThat(owners).hasSize(5);
+		assertThat(owners).allSatisfy(owner -> {
+			assertThat(Hibernate.isInitialized(owner.getPets())).isTrue();
+			assertThat(owner.getPets())
+				.allSatisfy(pet -> assertThat(Hibernate.isInitialized(pet.getVisits())).isFalse());
+		});
+	}
+
+	@Test
+	void ownerDetailLoaderInitializesPetsWithoutDuplicatingThem() {
+		Optional<Owner> optionalOwner = this.owners.findWithPetsById(6);
+
+		assertThat(optionalOwner).isPresent();
+		Owner owner = optionalOwner.get();
+		assertThat(Hibernate.isInitialized(owner.getPets())).isTrue();
+		assertThat(owner.getPets()).hasSize(2);
+		assertThat(owner.getPets()).allSatisfy(pet -> assertThat(Hibernate.isInitialized(pet.getVisits())).isFalse());
 	}
 
 	@Test

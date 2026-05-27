@@ -95,6 +95,7 @@ class OwnerControllerTests {
 			.willReturn(new PageImpl<>(List.of(george)));
 
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(george));
+		given(this.owners.findWithPetsById(TEST_OWNER_ID)).willReturn(Optional.of(george));
 		Visit visit = new Visit();
 		visit.setDate(LocalDate.now());
 		george.getPet("Max").getVisits().add(visit);
@@ -141,8 +142,11 @@ class OwnerControllerTests {
 
 	@Test
 	void processFindFormSuccess() throws Exception {
-		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()));
+		Owner secondOwner = new Owner();
+		secondOwner.setId(2);
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), secondOwner));
 		when(this.owners.findByLastNameStartingWith(anyString(), any(Pageable.class))).thenReturn(tasks);
+		when(this.owners.findByIdIn(List.of(TEST_OWNER_ID, 2))).thenReturn(tasks.getContent());
 		mockMvc.perform(get("/owners?page=1")).andExpect(status().isOk()).andExpect(view().name("owners/ownersList"));
 	}
 
