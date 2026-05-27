@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -33,6 +34,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasItem;
@@ -147,12 +149,47 @@ class OwnerControllerTests {
 	}
 
 	@Test
+	void processFindFormDefaultsInvalidPageValuesToFirstPage() throws Exception {
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()), PageRequest.of(0, 5), 6);
+		when(this.owners.findByLastNameStartingWith(anyString(), any(Pageable.class))).thenReturn(tasks);
+
+		for (String page : List.of("0", "-1", "not-a-number")) {
+			mockMvc.perform(get("/owners").param("page", page))
+				.andExpect(status().isOk())
+				.andExpect(model().attribute("currentPage", 1))
+				.andExpect(view().name("owners/ownersList"));
+		}
+	}
+
+	@Test
 	void processFindFormByLastName() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george()));
 		when(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class))).thenReturn(tasks);
 		mockMvc.perform(get("/owners?page=1").param("lastName", "Franklin"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/" + TEST_OWNER_ID));
+	}
+
+	@Test
+	void processFindFormPreservesLastNameInPaginationLinks() throws Exception {
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()), PageRequest.of(1, 5), 11);
+		when(this.owners.findByLastNameStartingWith(eq("Da"), any(Pageable.class))).thenReturn(tasks);
+
+		mockMvc.perform(get("/owners").param("page", "2").param("lastName", "Da"))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("/owners?page=1&amp;lastName=Da")))
+			.andExpect(content().string(containsString("/owners?page=3&amp;lastName=Da")));
+	}
+
+	@Test
+	void processFindFormLeavesUnfilteredPaginationLinksClean() throws Exception {
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()), PageRequest.of(1, 5), 11);
+		when(this.owners.findByLastNameStartingWith(eq(""), any(Pageable.class))).thenReturn(tasks);
+
+		mockMvc.perform(get("/owners").param("page", "2"))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("/owners?page=1")))
+			.andExpect(content().string(not(containsString("lastName="))));
 	}
 
 	@Test
