@@ -62,7 +62,7 @@ public class Owner extends Person {
 	private String telephone;
 
 	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-	@JoinColumn(name = "owner_id")
+	@JoinColumn(name = "owner_id", nullable = false)
 	@OrderBy("name")
 	private final List<Pet> pets = new ArrayList<>();
 
