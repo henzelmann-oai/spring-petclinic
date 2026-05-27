@@ -4,11 +4,10 @@ services:
     ports:
       - "3306:3306"
     environment:
-      - MYSQL_ROOT_PASSWORD=
-      - MYSQL_ALLOW_EMPTY_PASSWORD=true
-      - MYSQL_USER=petclinic
-      - MYSQL_PASSWORD=petclinic
-      - MYSQL_DATABASE=petclinic
+      - MYSQL_ROOT_PASSWORD=${PETCLINIC_MYSQL_ROOT_PASSWORD:?Set PETCLINIC_MYSQL_ROOT_PASSWORD in your shell or .env file}
+      - MYSQL_USER=${PETCLINIC_MYSQL_USER:?Set PETCLINIC_MYSQL_USER in your shell or .env file}
+      - MYSQL_PASSWORD=${PETCLINIC_MYSQL_PASSWORD:?Set PETCLINIC_MYSQL_PASSWORD in your shell or .env file}
+      - MYSQL_DATABASE=${PETCLINIC_MYSQL_DATABASE:-petclinic}
     volumes:
       - "./conf.d:/etc/mysql/conf.d:ro"
   postgres:
@@ -16,6 +15,6 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_PASSWORD=petclinic
-      - POSTGRES_USER=petclinic
-      - POSTGRES_DB=petclinic
+      - POSTGRES_USER=${PETCLINIC_POSTGRES_USER:?Set PETCLINIC_POSTGRES_USER in your shell or .env file}
+      - POSTGRES_PASSWORD=${PETCLINIC_POSTGRES_PASSWORD:?Set PETCLINIC_POSTGRES_PASSWORD in your shell or .env file}
+      - POSTGRES_DB=${PETCLINIC_POSTGRES_DB:-petclinic}
