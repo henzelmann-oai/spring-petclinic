@@ -33,6 +33,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasItem;
@@ -226,6 +227,35 @@ class OwnerControllerTests {
 			.andExpect(model().attribute("owner",
 					hasProperty("pets", hasItem(hasProperty("visits", hasSize(greaterThan(0)))))))
 			.andExpect(view().name("owners/ownerDetails"));
+	}
+
+	@Test
+	void showOwnerWithoutFlashMessages() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID))
+			.andExpect(status().isOk())
+			.andExpect(content().string(not(containsString("id=\"success-message\""))))
+			.andExpect(content().string(not(containsString("id=\"error-message\""))))
+			.andExpect(content().string(containsString("if (message)")));
+	}
+
+	@Test
+	void showOwnerWithSuccessMessageOnly() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID).flashAttr("message", "Owner saved"))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("id=\"success-message\"")))
+			.andExpect(content().string(containsString("Owner saved")))
+			.andExpect(content().string(not(containsString("id=\"error-message\""))))
+			.andExpect(content().string(containsString("if (message)")));
+	}
+
+	@Test
+	void showOwnerWithErrorMessageOnly() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID).flashAttr("error", "Owner mismatch"))
+			.andExpect(status().isOk())
+			.andExpect(content().string(not(containsString("id=\"success-message\""))))
+			.andExpect(content().string(containsString("id=\"error-message\"")))
+			.andExpect(content().string(containsString("Owner mismatch")))
+			.andExpect(content().string(containsString("if (message)")));
 	}
 
 	@Test
